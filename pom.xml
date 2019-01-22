@@ -21,8 +21,8 @@
   <packaging>pom</packaging>
 
   <properties>
-    <aeron.version>1.11.3</aeron.version>
-    <reactor-core.version>3.2.2.RELEASE</reactor-core.version>
+    <aeron.version>1.15.0</aeron.version>
+    <reactor-core.version>3.2.5.RELEASE</reactor-core.version>
     <reactivestreams.version>1.0.2</reactivestreams.version>
 
     <slf4j.version>1.7.7</slf4j.version>

@@ -42,11 +42,11 @@ class Client {
   private final AtomicInteger counter = new AtomicInteger();
   private final AeronResources resources;
 
-  private Client(AeronResources resources) {
+  Client(AeronResources resources) {
     this.resources = resources;
   }
 
-  private void start() {
+  void start() {
     resources
         .scheduler()
         .schedule(
@@ -60,7 +60,8 @@ class Client {
 
               int sessionId = publication.sessionId();
 
-              String inboundChannel = inboundChannelBuilder.sessionId(sessionId).build();
+              // String inboundChannel = inboundChannelBuilder.sessionId(sessionId).build();
+              String inboundChannel = inboundChannelBuilder.tags(String.valueOf(sessionId)).build();
 
               Subscription subscription =
                   resources

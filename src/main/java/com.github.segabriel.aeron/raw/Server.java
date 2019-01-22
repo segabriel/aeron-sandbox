@@ -43,14 +43,14 @@ class Server {
   private final AtomicInteger counter = new AtomicInteger();
   private final AeronResources resources;
 
-  public Server(AeronResources resources) {
+  Server(AeronResources resources) {
     this.resources = resources;
   }
 
   private volatile Subscription acceptSubscription;
   private final Map<Integer, Publication> publications = new ConcurrentHashMap<>();
 
-  private void start() {
+  void start() {
     resources
         .scheduler()
         .schedule(
@@ -70,7 +70,8 @@ class Server {
 
   private void onAcceptImageAvailable(Image image) {
     int sessionId = image.sessionId();
-    String outboundChannel = outboundChannelBuilder.sessionId(sessionId).build();
+    // String outboundChannel = outboundChannelBuilder.sessionId(sessionId).build();
+    String outboundChannel = outboundChannelBuilder.tags(String.valueOf(sessionId)).build();
 
     logger.debug(
         "onImageAvailable: {} {}, create outbound {}",

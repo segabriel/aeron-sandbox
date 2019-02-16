@@ -70,8 +70,7 @@ class Server {
 
   private void onAcceptImageAvailable(Image image) {
     int sessionId = image.sessionId();
-    // String outboundChannel = outboundChannelBuilder.sessionId(sessionId).build();
-    String outboundChannel = outboundChannelBuilder.tags(String.valueOf(sessionId)).build();
+    String outboundChannel = outboundChannelBuilder.sessionId(sessionId).build();
 
     logger.debug(
         "onImageAvailable: {} {}, create outbound {}",

@@ -60,8 +60,7 @@ class Client {
 
               int sessionId = publication.sessionId();
 
-              // String inboundChannel = inboundChannelBuilder.sessionId(sessionId).build();
-              String inboundChannel = inboundChannelBuilder.tags(String.valueOf(sessionId)).build();
+              String inboundChannel = inboundChannelBuilder.sessionId(sessionId).build();
 
               Subscription subscription =
                   resources

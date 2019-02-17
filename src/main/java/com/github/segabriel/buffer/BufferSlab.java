@@ -46,30 +46,37 @@ public class BufferSlab {
       //  w----------r
       //  b-----------
 
+
+
       int availableBytes = rIndex - wIndex;
       if (availableBytes >= fullLength) {
         this.writeIndex = wIndex + fullLength;
         this.readIndex = rIndex;
         try {
-//        return slice(wIndex, fullLength, nextReadOffset(rIndex));
-        return slice(wIndex, fullLength);
+          //        return slice(wIndex, fullLength, nextReadOffset(rIndex));
+          return slice(wIndex, fullLength);
         } catch (Exception e) {
           throw e;
         }
       }
 
       if (!isReleased(rIndex)) {
+
+//        if (wIndex != 0 && rIndex != 0) {
+//          return allocate(fullLength, 0, 0);   // todo workaround
+//        }
+
         return null;
       }
 
       while (isReleased(rIndex)) {
         int nextOffset = nextReadOffset(rIndex);
 
-        if (nextOffset == rIndex) { //todo
-          this.readIndex = rIndex;
-          System.err.println("dsa");
-          return null;
-        }
+//        if (nextOffset == rIndex) { // todo
+//          this.readIndex = rIndex;
+//          System.err.println("dsa");
+//          return null;
+//        }
 
         if (nextOffset == wIndex || nextOffset == this.writeIndex) {
           // whole buffer is available, reset all index
@@ -78,7 +85,7 @@ public class BufferSlab {
           availableBytes = underlying.capacity();
           if (availableBytes >= fullLength) {
             this.writeIndex = wIndex + fullLength;
-//            return slice(wIndex, fullLength, nextOffset);
+            //            return slice(wIndex, fullLength, nextOffset);
             return slice(wIndex, fullLength);
           }
           return null;
@@ -102,7 +109,7 @@ public class BufferSlab {
           if (this.writeIndex == underlying.capacity()) {
             this.writeIndex = 0;
           }
-//          return slice(wIndex, fullLength, nextOffset);
+          //          return slice(wIndex, fullLength, nextOffset);
           return slice(wIndex, fullLength);
         }
       }
@@ -130,7 +137,7 @@ public class BufferSlab {
         if (this.writeIndex == underlying.capacity()) {
           this.writeIndex = 0;
         }
-//        return slice(wIndex, fullLength, nextReadOffset(rIndex));
+        //        return slice(wIndex, fullLength, nextReadOffset(rIndex));
         return slice(wIndex, fullLength);
       }
 
@@ -151,28 +158,33 @@ public class BufferSlab {
         this.readIndex = rIndex;
         if (availableBytes >= fullLength) {
           this.writeIndex = wIndex + fullLength;
-//          return slice(wIndex, fullLength, nextOffset);
+          //          return slice(wIndex, fullLength, nextOffset);
           return slice(wIndex, fullLength);
         }
         return null;
       }
 
-//      int availableBytes = nextOffset - rIndex;
-//      if (availableBytes >= fullLength) {
-//        this.writeIndex = wIndex + fullLength;
-//        return slice(wIndex, fullLength);
-//      }
+      //      int availableBytes = nextOffset - rIndex;
+      //      if (availableBytes >= fullLength) {
+      //        this.writeIndex = wIndex + fullLength;
+      //        return slice(wIndex, fullLength);
+      //      }
 
-//      if (!isReleased(nextOffset)) {
-//        return null;
-//      }
+      //      if (!isReleased(nextOffset)) {
+      //        return null;
+      //      }
 
-//      if (nextOffset < 1) {
-//        return null;
-//      }
+      //      if (nextOffset < 1) {
+      //        return null;
+      //      }
+
       rIndex = nextOffset;
       return allocate(fullLength, wIndex, rIndex);
     }
+
+//    if (wIndex != 0) {
+//      return allocate(fullLength, 0, 0); // todo workaround
+//    }
 
     this.readIndex = rIndex;
     return null;
@@ -206,12 +218,17 @@ public class BufferSlab {
     if (nextReadOffset + BufferSlice.HEADER_OFFSET >= underlying.capacity()) {
       nextReadOffset = 0;
     }
-//    else {
-//      underlying.putByte(nextReadOffset, (byte) 0);
-//      underlying.putInt(nextReadOffset + BufferSlice.FREE_MARK_FIELD_OFFSET, 0);
-//    }
+    //    else {
+    //      underlying.putByte(nextReadOffset, (byte) 0);
+    //      underlying.putInt(nextReadOffset + BufferSlice.FREE_MARK_FIELD_OFFSET, 0);
+    //    }
     underlying.putInt(offset + BufferSlice.FREE_MARK_FIELD_OFFSET, nextReadOffset);
-    return new BufferSlice(this, offset, fullLength);
+    BufferSlice slice = new BufferSlice(this, offset, fullLength);
+    if (DEBUG) {
+      System.err.println(
+          debugString("slice") + ", offset=" + offset + ", nextReadOffset=" + nextReadOffset);
+    }
+    return slice;
   }
 
   private BufferSlice slice3(int offset, int fullLength) {
@@ -221,11 +238,10 @@ public class BufferSlab {
       underlying.putInt(offset + BufferSlice.FREE_MARK_FIELD_OFFSET, 0);
     } else {
 
-//      nextReadOffset(offset)
+      //      nextReadOffset(offset)
 
       underlying.putInt(offset + BufferSlice.FREE_MARK_FIELD_OFFSET, nextReadOffset);
     }
-
 
     return new BufferSlice(this, offset, fullLength);
   }
@@ -238,7 +254,7 @@ public class BufferSlab {
       if (oldNextReadOffset - nextReadOffset >= BufferSlice.HEADER_OFFSET) {
         underlying.putByte(nextReadOffset, (byte) 0);
         underlying.putInt(nextReadOffset + BufferSlice.FREE_MARK_FIELD_OFFSET, oldNextReadOffset);
-        if (oldNextReadOffset< 0 || oldNextReadOffset >= underlying.capacity()) {
+        if (oldNextReadOffset < 0 || oldNextReadOffset >= underlying.capacity()) {
           System.out.println(oldNextReadOffset);
         }
       } else {
@@ -249,16 +265,19 @@ public class BufferSlab {
         nextReadOffset = 0;
       } else {
         underlying.putByte(nextReadOffset, (byte) 0);
-        underlying.putInt(nextReadOffset + BufferSlice.FREE_MARK_FIELD_OFFSET, underlying.capacity() - nextReadOffset);
+        underlying.putInt(
+            nextReadOffset + BufferSlice.FREE_MARK_FIELD_OFFSET,
+            underlying.capacity() - nextReadOffset);
 
-        if (underlying.capacity() - nextReadOffset< 0 || underlying.capacity() - nextReadOffset >= underlying.capacity()) {
+        if (underlying.capacity() - nextReadOffset < 0
+            || underlying.capacity() - nextReadOffset >= underlying.capacity()) {
           System.out.println(underlying.capacity() - nextReadOffset);
         }
       }
     }
 
     underlying.putInt(offset + BufferSlice.FREE_MARK_FIELD_OFFSET, nextReadOffset);
-    if (nextReadOffset< 0 || nextReadOffset >= underlying.capacity()) {
+    if (nextReadOffset < 0 || nextReadOffset >= underlying.capacity()) {
       System.out.println(nextReadOffset);
     }
 
@@ -274,43 +293,43 @@ public class BufferSlab {
 
   void release(int offset) {
     underlying.putByteVolatile(offset, (byte) 0);
-    debugPrint("release");
+    if (DEBUG) {
+      System.err.println(
+          debugString("release") + ", offset=" + offset + ", nextOffset=" + nextReadOffset(offset));
+    }
   }
 
   void putBytes(int index, byte[] src) {
-    debugPrint("write");
     underlying.putBytes(index, src);
-    debugPrint("commit");
+    if (DEBUG) {
+      System.err.println(debugString("write") + ", index=" + index + ", length=" + src.length);
+    }
   }
 
   void getBytes(int index, byte[] dst) {
     underlying.getBytes(index, dst);
   }
 
-  private void debugPrint(String operation) {
-    if (DEBUG) {
-      byte[] bytes = new byte[underlying.capacity()];
-      getBytes(0, bytes);
-      for (int i = 0; i < bytes.length; i++) {
-        char element = (char) bytes[i];
-        if ((element >= 'a' && element <= 'z')
-            || (element >= 'A' && element <= 'Z')
-            || element == '?') {
-          continue;
-        }
-        bytes[i] = '_';
+  private String debugString(String operation) {
+    byte[] bytes = new byte[underlying.capacity()];
+    getBytes(0, bytes);
+    for (int i = 0; i < bytes.length; i++) {
+      char element = (char) bytes[i];
+      if ((element >= 'a' && element <= 'z')
+          || (element >= 'A' && element <= 'Z')
+          || element == '?') {
+        continue;
       }
-      System.err.println(
-          new StringBuilder(underlying.capacity() + 100)
-              .append(id)
-              .append("/")
-              .append(operation.charAt(0))
-              .append("/")
-              .append(new String(bytes))
-              .append("r=")
-              .append(readIndex)
-              .append(", w=")
-              .append(writeIndex));
+      bytes[i] = '_';
     }
+    return id
+        + "/"
+        + operation.charAt(0)
+        + "/"
+        + new String(bytes)
+        + ", r="
+        + readIndex
+        + ", w="
+        + writeIndex;
   }
 }

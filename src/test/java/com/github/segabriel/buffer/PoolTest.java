@@ -25,22 +25,26 @@ class PoolTest {
     BufferPool pool = new BufferPool(100);
 
     Flux.range(0, 1000000)
-        .delayElements(Duration.ofMillis(50), Schedulers.single())
+        .delayElements(Duration.ofMillis(10), Schedulers.single())
         .flatMap(
             i -> {
               int size = 3 + random.nextInt(10);
               byte[] msg = randomArray(size);
               BufferSlice slice = pool.allocate(msg.length).putBytes(0, msg);
 
-              return Mono.delay(Duration.ofMillis(25), Schedulers.parallel())
+              return Mono.delay(Duration.ofMillis(50), Schedulers.parallel())
                   .doOnSuccess(
                       $ -> {
                         byte[] actual = new byte[msg.length];
                         slice.getBytes(0, actual);
-                        assertArrayEquals(msg, actual);
+                        assertArrayEquals(
+                            msg,
+                            actual,
+                            "slice: offset=" + slice.offset() + ", length=" + slice.capacity());
                         slice.release();
                       });
-            }, Integer.MAX_VALUE)
+            },
+            Integer.MAX_VALUE)
         .doOnError(Throwable::printStackTrace)
         .blockLast();
   }

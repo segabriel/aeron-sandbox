@@ -2,8 +2,6 @@ package com.github.segabriel.buffer;
 
 import static java.lang.System.getProperty;
 
-import org.agrona.concurrent.UnsafeBuffer;
-
 import java.nio.ByteBuffer;
 
 /**
@@ -30,20 +28,18 @@ public class BufferSlice {
   public static final int NEXT_READ_FIELD_OFFSET = Integer.BYTES;
   public static final int HEADER_OFFSET = FREE_MARK_FIELD_OFFSET + NEXT_READ_FIELD_OFFSET;
 
-  private final int id;
-  private final UnsafeBuffer underlying;
+  private final BufferSlab slab;
   private final int offset;
   private final int length;
 
-  public BufferSlice(int id, UnsafeBuffer underlying, int offset, int length) {
-    this.id = id;
-    this.underlying = underlying;
+  public BufferSlice(BufferSlab slab, int offset, int length) {
+    this.slab = slab;
     this.offset = offset;
     this.length = length;
   }
 
   public void release() {
-    underlying.putByteVolatile(offset, (byte) 0);
+    slab.release(offset);
     debugPrint("release");
   }
 
@@ -56,29 +52,29 @@ public class BufferSlice {
   }
 
   public BufferSlice putBytes(int index, ByteBuffer srcBuffer, int srcIndex, int length) {
-    underlying.putBytes(offset() + index, srcBuffer, srcIndex, length);
+    slab.underlying.putBytes(offset() + index, srcBuffer, srcIndex, length);
     debugPrint("putBytes");
     return this;
   }
 
   public BufferSlice putBytes(int index, byte[] src) {
-    underlying.putBytes(offset() + index, src);
+    slab.underlying.putBytes(offset() + index, src);
     debugPrint("putBytes");
     return this;
   }
 
   public void getBytes(int index, ByteBuffer dstBuffer, int dstOffset, int length) {
-    underlying.getBytes(offset() + index, dstBuffer, dstOffset, length);
+    slab.underlying.getBytes(offset() + index, dstBuffer, dstOffset, length);
   }
 
   public void getBytes(final int index, final byte[] dst) {
-    underlying.getBytes(offset() + index, dst);
+    slab.underlying.getBytes(offset() + index, dst);
   }
 
   @Override
   public String toString() {
     byte[] bytes = new byte[capacity()];
-    underlying.getBytes(offset(), bytes, 0, capacity());
+    slab.underlying.getBytes(offset(), bytes, 0, capacity());
     return new String(bytes);
   }
 
@@ -88,7 +84,7 @@ public class BufferSlice {
     if (DEBUG) {
 
       StringBuilder builder =
-          new StringBuilder(underlying.capacity() + 100).append(id).append("/").append(operation.charAt(0) + "/")
+          new StringBuilder(slab.underlying.capacity() + 100).append(slab.id).append("/").append(operation.charAt(0) + "/")
 //              .append("\n")
           ;
 
@@ -96,8 +92,8 @@ public class BufferSlice {
 //        System.err.print(i % 10);
 //      }
 //      System.err.println();
-      byte[] bytes = new byte[underlying.capacity()];
-      underlying.getBytes(0, bytes);
+      byte[] bytes = new byte[slab.underlying.capacity()];
+      slab.underlying.getBytes(0, bytes);
       for (int i = 0; i < bytes.length; i++) {
         char element = (char) bytes[i];
         if ((element >= 'a' && element <= 'z') || (element >= 'A' && element <= 'Z') || element == '?') {
@@ -106,7 +102,7 @@ public class BufferSlice {
         bytes[i] = '_';
       }
 
-      System.err.println(builder.append(new String(bytes)));
+      System.err.println(builder.append(new String(bytes)).append("r=").append(slab.readIndex).append(", w=").append(slab.writeIndex));
     }
   }
 }

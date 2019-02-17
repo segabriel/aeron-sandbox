@@ -8,10 +8,10 @@ public class BufferSlab {
   private static final AtomicInteger COUNTER = new AtomicInteger();
 
   public final int id = COUNTER.incrementAndGet();
-  private final UnsafeBuffer underlying;
+  final UnsafeBuffer underlying;
 
-  private int readIndex;
-  private int writeIndex;
+  int readIndex;
+  int writeIndex;
 
   public BufferSlab(UnsafeBuffer underlying) {
     this.underlying = underlying;
@@ -205,7 +205,7 @@ public class BufferSlab {
 //      underlying.putInt(nextReadOffset + BufferSlice.FREE_MARK_FIELD_OFFSET, 0);
 //    }
     underlying.putInt(offset + BufferSlice.FREE_MARK_FIELD_OFFSET, nextReadOffset);
-    return new BufferSlice(id, underlying, offset, fullLength);
+    return new BufferSlice(this, offset, fullLength);
   }
 
   private BufferSlice slice3(int offset, int fullLength) {
@@ -221,7 +221,7 @@ public class BufferSlab {
     }
 
 
-    return new BufferSlice(id, underlying, offset, fullLength);
+    return new BufferSlice(this, offset, fullLength);
   }
 
   private BufferSlice slice(int offset, int fullLength, int oldNextReadOffset) {
@@ -269,7 +269,7 @@ public class BufferSlab {
       System.out.println(nextReadOffset);
     }
 
-    return new BufferSlice(id, underlying, offset, fullLength);
+    return new BufferSlice(this, offset, fullLength);
   }
 
   private void reset() {
@@ -277,5 +277,9 @@ public class BufferSlab {
     this.readIndex = 0;
     underlying.putByte(writeIndex, (byte) 0);
     underlying.putInt(writeIndex + BufferSlice.FREE_MARK_FIELD_OFFSET, 0);
+  }
+
+  void release(int offset) {
+    underlying.putByteVolatile(offset, (byte) 0);
   }
 }

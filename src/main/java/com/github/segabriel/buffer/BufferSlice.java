@@ -1,5 +1,8 @@
 package com.github.segabriel.buffer;
 
+import static java.lang.System.getProperty;
+
+import java.util.Arrays;
 import org.agrona.concurrent.UnsafeBuffer;
 
 import java.nio.ByteBuffer;
@@ -21,9 +24,11 @@ import java.nio.ByteBuffer;
  */
 public class BufferSlice {
 
+  public static final boolean DEBUG = "true".equalsIgnoreCase(getProperty("buffer.slice.debug", "false"));
+
   public static final int FREE_MARK_FIELD_OFFSET = Byte.BYTES;
-  public static final int MSG_LENGTH_FIELD_OFFSET = Integer.BYTES;
-  public static final int HEADER_OFFSET = FREE_MARK_FIELD_OFFSET + MSG_LENGTH_FIELD_OFFSET;
+  public static final int NEXT_READ_FIELD_OFFSET = Integer.BYTES;
+  public static final int HEADER_OFFSET = FREE_MARK_FIELD_OFFSET + NEXT_READ_FIELD_OFFSET;
 
   private final UnsafeBuffer underlying;
   private final int offset;
@@ -36,7 +41,8 @@ public class BufferSlice {
   }
 
   public void release() {
-    underlying.putByteVolatile(0, (byte) 0);
+    underlying.putByteVolatile(offset, (byte) 0);
+    debugPrint("release");
   }
 
   public int offset() {
@@ -47,16 +53,16 @@ public class BufferSlice {
     return length - HEADER_OFFSET;
   }
 
-  public void putBytes(int index, ByteBuffer srcBuffer, int srcIndex, int length) {
+  public BufferSlice putBytes(int index, ByteBuffer srcBuffer, int srcIndex, int length) {
     underlying.putBytes(offset() + index, srcBuffer, srcIndex, length);
+    debugPrint("putBytes");
+    return this;
   }
 
-  public int putStringUtf8(int index, String value) {
-    return underlying.putStringUtf8(offset() + index, value);
-  }
-
-  public String getStringUtf8(int index, int length) {
-    return underlying.getStringUtf8(offset() + index, length);
+  public BufferSlice putBytes(int index, byte[] src) {
+    underlying.putBytes(offset() + index, src);
+    debugPrint("putBytes");
+    return this;
   }
 
   public void getBytes(int index, ByteBuffer dstBuffer, int dstOffset, int length) {
@@ -65,6 +71,29 @@ public class BufferSlice {
 
   @Override
   public String toString() {
-    return underlying.getStringUtf8(offset(), capacity());
+    byte[] bytes = new byte[capacity()];
+    underlying.getBytes(offset(), bytes, 0, capacity());
+    return new String(bytes);
+  }
+
+  public void debugPrint(String operation) {
+    if (DEBUG) {
+      System.err.println(operation);
+
+      for (int i = 0; i < underlying.capacity(); i++) {
+        System.err.print(i % 10);
+      }
+      System.err.println();
+      byte[] bytes = new byte[underlying.capacity()];
+      underlying.getBytes(0, bytes);
+      for (int i = 0; i < bytes.length; i++) {
+        char element = (char) bytes[i];
+        if ((element >= 'a' && element <= 'z') || (element >= 'A' && element <= 'Z')) {
+          continue;
+        }
+        bytes[i] = '_';
+      }
+      System.err.println(new String(bytes));
+    }
   }
 }

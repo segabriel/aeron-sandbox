@@ -1,17 +1,23 @@
 package com.github.segabriel.buffer;
 
+import static java.lang.System.getProperty;
+
+import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.agrona.concurrent.UnsafeBuffer;
 
 public class BufferSlab {
+
+  public static final boolean DEBUG =
+      "true".equalsIgnoreCase(getProperty("buffer.slice.debug", "false"));
 
   private static final AtomicInteger COUNTER = new AtomicInteger();
 
   public final int id = COUNTER.incrementAndGet();
   final UnsafeBuffer underlying;
 
-  int readIndex;
-  int writeIndex;
+  private int readIndex;
+  private int writeIndex;
 
   public BufferSlab(UnsafeBuffer underlying) {
     this.underlying = underlying;
@@ -251,19 +257,6 @@ public class BufferSlab {
       }
     }
 
-//
-//
-//    if (nextReadOffset + BufferSlice.HEADER_OFFSET >= underlying.capacity()) {
-//      nextReadOffset = 0;
-//    } else {
-//      underlying.putByte(nextReadOffset, (byte) 0);
-//      if ((oldNextReadOffset - offset) > BufferSlice.HEADER_OFFSET) {
-//        underlying.putInt(nextReadOffset + BufferSlice.FREE_MARK_FIELD_OFFSET, oldNextReadOffset);
-//      }
-//
-//
-//      underlying.putInt(nextReadOffset + BufferSlice.FREE_MARK_FIELD_OFFSET, 0);
-//    }
     underlying.putInt(offset + BufferSlice.FREE_MARK_FIELD_OFFSET, nextReadOffset);
     if (nextReadOffset< 0 || nextReadOffset >= underlying.capacity()) {
       System.out.println(nextReadOffset);
@@ -281,5 +274,43 @@ public class BufferSlab {
 
   void release(int offset) {
     underlying.putByteVolatile(offset, (byte) 0);
+    debugPrint("release");
+  }
+
+  void putBytes(int index, byte[] src) {
+    debugPrint("write");
+    underlying.putBytes(index, src);
+    debugPrint("commit");
+  }
+
+  void getBytes(int index, byte[] dst) {
+    underlying.getBytes(index, dst);
+  }
+
+  private void debugPrint(String operation) {
+    if (DEBUG) {
+      byte[] bytes = new byte[underlying.capacity()];
+      getBytes(0, bytes);
+      for (int i = 0; i < bytes.length; i++) {
+        char element = (char) bytes[i];
+        if ((element >= 'a' && element <= 'z')
+            || (element >= 'A' && element <= 'Z')
+            || element == '?') {
+          continue;
+        }
+        bytes[i] = '_';
+      }
+      System.err.println(
+          new StringBuilder(underlying.capacity() + 100)
+              .append(id)
+              .append("/")
+              .append(operation.charAt(0))
+              .append("/")
+              .append(new String(bytes))
+              .append("r=")
+              .append(readIndex)
+              .append(", w=")
+              .append(writeIndex));
+    }
   }
 }

@@ -11,7 +11,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-class Pool2Test {
+class PoolTest {
 
   static {
     System.setProperty("buffer.slice.debug", "true");

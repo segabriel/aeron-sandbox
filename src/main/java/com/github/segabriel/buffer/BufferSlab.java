@@ -1,9 +1,13 @@
 package com.github.segabriel.buffer;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.agrona.concurrent.UnsafeBuffer;
 
 public class BufferSlab {
 
+  private static final AtomicInteger COUNTER = new AtomicInteger();
+
+  public final int id = COUNTER.incrementAndGet();
   private final UnsafeBuffer underlying;
 
   private int readIndex;
@@ -41,7 +45,8 @@ public class BufferSlab {
         this.writeIndex = wIndex + fullLength;
         this.readIndex = rIndex;
         try {
-        return slice(wIndex, fullLength, nextReadOffset(rIndex));
+//        return slice(wIndex, fullLength, nextReadOffset(rIndex));
+        return slice(wIndex, fullLength);
         } catch (Exception e) {
           throw e;
         }
@@ -53,6 +58,13 @@ public class BufferSlab {
 
       while (isReleased(rIndex)) {
         int nextOffset = nextReadOffset(rIndex);
+
+        if (nextOffset == rIndex) { //todo
+          this.readIndex = rIndex;
+          System.err.println("dsa");
+          return null;
+        }
+
         if (nextOffset == wIndex || nextOffset == this.writeIndex) {
           // whole buffer is available, reset all index
           wIndex = 0;
@@ -60,7 +72,8 @@ public class BufferSlab {
           availableBytes = underlying.capacity();
           if (availableBytes >= fullLength) {
             this.writeIndex = wIndex + fullLength;
-            return slice(wIndex, fullLength, nextOffset);
+//            return slice(wIndex, fullLength, nextOffset);
+            return slice(wIndex, fullLength);
           }
           return null;
         }
@@ -83,7 +96,8 @@ public class BufferSlab {
           if (this.writeIndex == underlying.capacity()) {
             this.writeIndex = 0;
           }
-          return slice(wIndex, fullLength, nextOffset);
+//          return slice(wIndex, fullLength, nextOffset);
+          return slice(wIndex, fullLength);
         }
       }
 
@@ -110,7 +124,8 @@ public class BufferSlab {
         if (this.writeIndex == underlying.capacity()) {
           this.writeIndex = 0;
         }
-        return slice(wIndex, fullLength, nextReadOffset(rIndex));
+//        return slice(wIndex, fullLength, nextReadOffset(rIndex));
+        return slice(wIndex, fullLength);
       }
 
       wIndex = 0;
@@ -127,9 +142,11 @@ public class BufferSlab {
           reset();
         }
         int availableBytes = underlying.capacity();
+        this.readIndex = rIndex;
         if (availableBytes >= fullLength) {
           this.writeIndex = wIndex + fullLength;
-          return slice(wIndex, fullLength, nextOffset);
+//          return slice(wIndex, fullLength, nextOffset);
+          return slice(wIndex, fullLength);
         }
         return null;
       }
@@ -162,15 +179,13 @@ public class BufferSlab {
    *
    * <p>it will return readIndex if the next offset equals readIndex
    *
-   * <p>it will return -1 if the next offset exceeds underlying.capacity()
-   *
    * @param currentReadOffset current offset
    * @return next offset
    */
   private int nextReadOffset(int currentReadOffset) {
     int i = underlying.getInt(currentReadOffset + BufferSlice.FREE_MARK_FIELD_OFFSET);
-    if (i< 0 || i >= underlying.capacity()) {
-      System.out.println(i);
+    if (i >= underlying.capacity()) {
+      return 0; // todo workaround
     }
     return i;
   }
@@ -179,22 +194,38 @@ public class BufferSlab {
     return underlying.getByteVolatile(offset) == 0;
   }
 
-//  private BufferSlice slice(int offset, int fullLength) {
-//    underlying.putByte(offset, (byte) 1);
-//    int nextReadOffset = offset + fullLength;
-//    if (nextReadOffset + BufferSlice.HEADER_OFFSET >= underlying.capacity()) {
-//      nextReadOffset = 0;
+  private BufferSlice slice(int offset, int fullLength) {
+    underlying.putByte(offset, (byte) '?');
+    int nextReadOffset = offset + fullLength;
+    if (nextReadOffset + BufferSlice.HEADER_OFFSET >= underlying.capacity()) {
+      nextReadOffset = 0;
+    }
+//    else {
+//      underlying.putByte(nextReadOffset, (byte) 0);
+//      underlying.putInt(nextReadOffset + BufferSlice.FREE_MARK_FIELD_OFFSET, 0);
 //    }
-////    else {
-////      underlying.putByte(nextReadOffset, (byte) 0);
-////      underlying.putInt(nextReadOffset + BufferSlice.FREE_MARK_FIELD_OFFSET, 0);
-////    }
-//    underlying.putInt(offset + BufferSlice.FREE_MARK_FIELD_OFFSET, nextReadOffset);
-//    return new BufferSlice(underlying, offset, fullLength);
-//  }
+    underlying.putInt(offset + BufferSlice.FREE_MARK_FIELD_OFFSET, nextReadOffset);
+    return new BufferSlice(id, underlying, offset, fullLength);
+  }
+
+  private BufferSlice slice3(int offset, int fullLength) {
+    underlying.putByte(offset, (byte) '?');
+    int nextReadOffset = offset + fullLength;
+    if (nextReadOffset + BufferSlice.HEADER_OFFSET >= underlying.capacity()) {
+      underlying.putInt(offset + BufferSlice.FREE_MARK_FIELD_OFFSET, 0);
+    } else {
+
+//      nextReadOffset(offset)
+
+      underlying.putInt(offset + BufferSlice.FREE_MARK_FIELD_OFFSET, nextReadOffset);
+    }
+
+
+    return new BufferSlice(id, underlying, offset, fullLength);
+  }
 
   private BufferSlice slice(int offset, int fullLength, int oldNextReadOffset) {
-    underlying.putByte(offset, (byte) 1);
+    underlying.putByte(offset, (byte) '?');
     int nextReadOffset = offset + fullLength;
 
     if (oldNextReadOffset >= nextReadOffset) {
@@ -238,7 +269,7 @@ public class BufferSlab {
       System.out.println(nextReadOffset);
     }
 
-    return new BufferSlice(underlying, offset, fullLength);
+    return new BufferSlice(id, underlying, offset, fullLength);
   }
 
   private void reset() {

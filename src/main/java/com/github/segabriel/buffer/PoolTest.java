@@ -22,7 +22,7 @@ public class PoolTest {
       BufferSlice slice = pool.allocate(23 + random.nextInt(500));
       slice.putBytes(0, msg.getBytes(StandardCharsets.UTF_8));
 //      slice.print();
-      Mono.delay(Duration.ofMillis(100)).doOnSuccess($ -> slice.release()).subscribe();
+      Mono.delay(Duration.ofMillis(50)).doOnSuccess($ -> slice.release()).subscribe();
     }
   }
 }

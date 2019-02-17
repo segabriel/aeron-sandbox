@@ -2,7 +2,6 @@ package com.github.segabriel.buffer;
 
 import static java.lang.System.getProperty;
 
-import java.util.Arrays;
 import org.agrona.concurrent.UnsafeBuffer;
 
 import java.nio.ByteBuffer;
@@ -24,17 +23,20 @@ import java.nio.ByteBuffer;
  */
 public class BufferSlice {
 
-  public static final boolean DEBUG = "true".equalsIgnoreCase(getProperty("buffer.slice.debug", "false"));
+  public static final boolean DEBUG =
+      "true".equalsIgnoreCase(getProperty("buffer.slice.debug", "false"));
 
   public static final int FREE_MARK_FIELD_OFFSET = Byte.BYTES;
   public static final int NEXT_READ_FIELD_OFFSET = Integer.BYTES;
   public static final int HEADER_OFFSET = FREE_MARK_FIELD_OFFSET + NEXT_READ_FIELD_OFFSET;
 
+  private final int id;
   private final UnsafeBuffer underlying;
   private final int offset;
   private final int length;
 
-  public BufferSlice(UnsafeBuffer underlying, int offset, int length) {
+  public BufferSlice(int id, UnsafeBuffer underlying, int offset, int length) {
+    this.id = id;
     this.underlying = underlying;
     this.offset = offset;
     this.length = length;
@@ -69,6 +71,10 @@ public class BufferSlice {
     underlying.getBytes(offset() + index, dstBuffer, dstOffset, length);
   }
 
+  public void getBytes(final int index, final byte[] dst) {
+    underlying.getBytes(offset() + index, dst);
+  }
+
   @Override
   public String toString() {
     byte[] bytes = new byte[capacity()];
@@ -76,24 +82,31 @@ public class BufferSlice {
     return new String(bytes);
   }
 
+  private String liner;
+
   public void debugPrint(String operation) {
     if (DEBUG) {
-      System.err.println(operation);
 
-      for (int i = 0; i < underlying.capacity(); i++) {
-        System.err.print(i % 10);
-      }
-      System.err.println();
+      StringBuilder builder =
+          new StringBuilder(underlying.capacity() + 100).append(id).append("/").append(operation.charAt(0) + "/")
+//              .append("\n")
+          ;
+
+//      for (int i = 0; i < underlying.capacity(); i++) {
+//        System.err.print(i % 10);
+//      }
+//      System.err.println();
       byte[] bytes = new byte[underlying.capacity()];
       underlying.getBytes(0, bytes);
       for (int i = 0; i < bytes.length; i++) {
         char element = (char) bytes[i];
-        if ((element >= 'a' && element <= 'z') || (element >= 'A' && element <= 'Z')) {
+        if ((element >= 'a' && element <= 'z') || (element >= 'A' && element <= 'Z') || element == '?') {
           continue;
         }
         bytes[i] = '_';
       }
-      System.err.println(new String(bytes));
+
+      System.err.println(builder.append(new String(bytes)));
     }
   }
 }

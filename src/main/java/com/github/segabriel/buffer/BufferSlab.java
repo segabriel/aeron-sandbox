@@ -2,7 +2,6 @@ package com.github.segabriel.buffer;
 
 import static java.lang.System.getProperty;
 
-import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.agrona.concurrent.UnsafeBuffer;
 
@@ -12,297 +11,189 @@ public class BufferSlab {
       "true".equalsIgnoreCase(getProperty("buffer.slice.debug", "false"));
 
   private static final AtomicInteger COUNTER = new AtomicInteger();
+  private static final byte OCCUPIED = (byte) '?';
+  private static final byte RELEASED = (byte) 0;
+  private static final int R0 = 0;
 
-  public final int id = COUNTER.incrementAndGet();
-  final UnsafeBuffer underlying;
+  private final int id = COUNTER.incrementAndGet();
+  private final UnsafeBuffer underlying;
 
-  private int readIndex;
-  private int writeIndex;
+  private int w0;
+  private int r;
+  private int w;
 
   public BufferSlab(UnsafeBuffer underlying) {
     this.underlying = underlying;
-    reset();
+    this.w0 = 0;
+    this.w = 0;
+    this.r = 0;
+    this.underlying.putByte(w, (byte) 0);
+    this.underlying.putInt(w + BufferSlice.FREE_MARK_FIELD_OFFSET, 0);
   }
 
-  public BufferSlice allocate(int size /*without headers*/) {
+  public BufferSlice allocate(int size) {
     final int fullLength = size + BufferSlice.HEADER_OFFSET;
-    return allocate(fullLength, writeIndex, readIndex);
+    return allocate(fullLength, w0, r, w);
   }
 
-  private BufferSlice allocate(final int fullLength, int wIndex, int rIndex) {
-
-    if (rIndex > wIndex) {
-      // not enough => move rIndex until not enough and then if not enough again => null
-      //  ---w-----r--
-      //  ---w------r-
-      //  ---w-------r
-      //  r--w--------
-      //  -r-w--------
-      //  --rw--------
-      //  ---b--------
-
-      //  w--------r--
-      //  w---------r-
-      //  w----------r
-      //  b-----------
-
-
-
-      int availableBytes = rIndex - wIndex;
-      if (availableBytes >= fullLength) {
-        this.writeIndex = wIndex + fullLength;
-        this.readIndex = rIndex;
-        try {
-          //        return slice(wIndex, fullLength, nextReadOffset(rIndex));
-          return slice(wIndex, fullLength);
-        } catch (Exception e) {
-          throw e;
-        }
+  private BufferSlice allocate(final int fullLength, int w0, int r, int w) {
+    int availableBytes = underlying.capacity() - w;
+    if (availableBytes >= fullLength) {
+      this.w = w + fullLength;
+      if (w == w0) {
+        this.w0 = this.w;
       }
+      return slice(w, fullLength);
+    }
 
-      if (!isReleased(rIndex)) {
+    if (w == w0) {
+      int r0 = R0;
 
-//        if (wIndex != 0 && rIndex != 0) {
-//          return allocate(fullLength, 0, 0);   // todo workaround
-//        }
+      while (isReleased(r0)) {
+        int nextOffset = nextReadOffset(r0);
 
-        return null;
-      }
-
-      while (isReleased(rIndex)) {
-        int nextOffset = nextReadOffset(rIndex);
-
-//        if (nextOffset == rIndex) { // todo
-//          this.readIndex = rIndex;
-//          System.err.println("dsa");
-//          return null;
-//        }
-
-        if (nextOffset == wIndex || nextOffset == this.writeIndex) {
-          // whole buffer is available, reset all index
-          wIndex = 0;
-          reset();
-          availableBytes = underlying.capacity();
-          if (availableBytes >= fullLength) {
-            this.writeIndex = wIndex + fullLength;
-            //            return slice(wIndex, fullLength, nextOffset);
-            return slice(wIndex, fullLength);
+        if (nextOffset == r0) {
+          if (r0 > r) {
+            this.r = r0;
           }
           return null;
         }
-        rIndex = nextOffset;
 
-        if (rIndex == 0 && wIndex == 0) {
-          System.out.println();
-        }
-
-        if (rIndex > wIndex) {
-          availableBytes = rIndex - wIndex;
-        }
-        if (wIndex > rIndex) {
-          availableBytes = underlying.capacity() - wIndex;
-        }
-
-        if (availableBytes >= fullLength) {
-          this.writeIndex = wIndex + fullLength;
-          this.readIndex = rIndex;
-          if (this.writeIndex == underlying.capacity()) {
-            this.writeIndex = 0;
+        if (nextOffset == w) {
+          this.w0 = this.w = this.r = 0;
+          availableBytes = underlying.capacity();
+          if (availableBytes >= fullLength) {
+            this.w0 = this.w = fullLength;
+            return slice(0, fullLength);
           }
-          //          return slice(wIndex, fullLength, nextOffset);
-          return slice(wIndex, fullLength);
+          return null;
+        }
+
+        availableBytes = r0 = nextOffset;
+        if (availableBytes >= fullLength) {
+          this.w0 = fullLength;
+          if (r0 > r) {
+            this.r = r0;
+          }
+          return slice(0, fullLength);
         }
       }
 
-      this.readIndex = rIndex;
+      if (r0 > r) {
+        this.r = r0;
+      }
+
+      return null;
+
+    } else {
+      availableBytes = r - w0;
+      if (availableBytes >= fullLength) {
+        this.w0 = w0 + fullLength;
+        return slice(w0, fullLength);
+      }
+
+      while (isReleased(r)) {
+        int nextOffset = nextReadOffset(r);
+
+        if (nextOffset == r) {
+          this.r = r;
+          return null;
+        }
+
+        if (nextOffset == w) {
+          this.r = r = R0;
+          this.w = w = this.w0 = w0;
+
+          availableBytes = underlying.capacity() - w;
+          if (availableBytes >= fullLength) {
+            this.w0 = this.w = w + fullLength;
+            return slice(w, fullLength);
+          }
+
+          if (w == 0) {
+            return null;
+          }
+
+          while (isReleased(r)) {
+            nextOffset = nextReadOffset(r);
+
+            if (nextOffset == r) {
+              this.r = r;
+              return null;
+            }
+
+            if (nextOffset == w) {
+              this.w0 = this.w = this.r = 0;
+              availableBytes = underlying.capacity();
+              if (availableBytes >= fullLength) {
+                this.w0 = this.w = fullLength;
+                return slice(0, fullLength);
+              }
+              return null;
+            }
+
+            availableBytes = r = nextOffset;
+            if (availableBytes >= fullLength) {
+              this.w0 = fullLength;
+              this.r = r;
+              return slice(0, fullLength);
+            }
+          }
+          return null;
+        }
+
+        r = nextOffset;
+        availableBytes = r - w0;
+        if (availableBytes >= fullLength) {
+          this.w0 = w0 + fullLength;
+          this.r = r;
+          return slice(w0, fullLength);
+        }
+      }
+
       return null;
     }
-
-    if (wIndex > rIndex) {
-      // not enough => change wIndex = 0, try again and if not enough again => null
-      //  ------r---w--
-      //  ------r----w-
-      //  ------r-----w
-      //  w-----r------
-
-      //  r---------w--
-      //  r----------w-
-      //  r-----------w
-      //  b------------
-
-      int availableBytes = underlying.capacity() - wIndex;
-      if (availableBytes >= fullLength) {
-        this.writeIndex = wIndex + fullLength;
-        this.readIndex = rIndex;
-        if (this.writeIndex == underlying.capacity()) {
-          this.writeIndex = 0;
-        }
-        //        return slice(wIndex, fullLength, nextReadOffset(rIndex));
-        return slice(wIndex, fullLength);
-      }
-
-      wIndex = 0;
-      return allocate(fullLength, wIndex, rIndex);
-    }
-
-    if (isReleased(rIndex)) { // rIndex == wIndex
-      int nextOffset = nextReadOffset(rIndex);
-      if (nextOffset == rIndex) {
-        // whole buffer is available
-        if (rIndex != 0) {
-          wIndex = 0;
-          rIndex = 0;
-          reset();
-        }
-        int availableBytes = underlying.capacity();
-        this.readIndex = rIndex;
-        if (availableBytes >= fullLength) {
-          this.writeIndex = wIndex + fullLength;
-          //          return slice(wIndex, fullLength, nextOffset);
-          return slice(wIndex, fullLength);
-        }
-        return null;
-      }
-
-      //      int availableBytes = nextOffset - rIndex;
-      //      if (availableBytes >= fullLength) {
-      //        this.writeIndex = wIndex + fullLength;
-      //        return slice(wIndex, fullLength);
-      //      }
-
-      //      if (!isReleased(nextOffset)) {
-      //        return null;
-      //      }
-
-      //      if (nextOffset < 1) {
-      //        return null;
-      //      }
-
-      rIndex = nextOffset;
-      return allocate(fullLength, wIndex, rIndex);
-    }
-
-//    if (wIndex != 0) {
-//      return allocate(fullLength, 0, 0); // todo workaround
-//    }
-
-    this.readIndex = rIndex;
-    return null;
   }
 
-  /**
-   * NOTE only for readIndex!!!
-   *
-   * <p>it will return the same offset if the next offset equals underlying.capacity()
-   *
-   * <p>it will return readIndex if the next offset equals readIndex
-   *
-   * @param currentReadOffset current offset
-   * @return next offset
-   */
   private int nextReadOffset(int currentReadOffset) {
-    int i = underlying.getInt(currentReadOffset + BufferSlice.FREE_MARK_FIELD_OFFSET);
-    if (i >= underlying.capacity()) {
-      return 0; // todo workaround
+    if (currentReadOffset == w) {
+      return currentReadOffset;
     }
-    return i;
+    return underlying.getInt(currentReadOffset + BufferSlice.FREE_MARK_FIELD_OFFSET);
   }
 
   private boolean isReleased(int offset) {
-    return underlying.getByteVolatile(offset) == 0;
+    return underlying.getByteVolatile(offset) == RELEASED;
   }
 
   private BufferSlice slice(int offset, int fullLength) {
-    underlying.putByte(offset, (byte) '?');
-    int nextReadOffset = offset + fullLength;
-    if (nextReadOffset + BufferSlice.HEADER_OFFSET >= underlying.capacity()) {
-      nextReadOffset = 0;
-    }
-    //    else {
-    //      underlying.putByte(nextReadOffset, (byte) 0);
-    //      underlying.putInt(nextReadOffset + BufferSlice.FREE_MARK_FIELD_OFFSET, 0);
-    //    }
-    underlying.putInt(offset + BufferSlice.FREE_MARK_FIELD_OFFSET, nextReadOffset);
+    underlying.putByte(offset, OCCUPIED);
+    int nextOffset = offset + fullLength;
+    underlying.putInt(offset + BufferSlice.FREE_MARK_FIELD_OFFSET, nextOffset);
     BufferSlice slice = new BufferSlice(this, offset, fullLength);
     if (DEBUG) {
       System.err.println(
-          debugString("slice") + ", offset=" + offset + ", nextReadOffset=" + nextReadOffset);
+          debugString("slice") + "| s, offset=" + offset + ", nextOffset=" + nextOffset);
     }
     return slice;
   }
 
-  private BufferSlice slice3(int offset, int fullLength) {
-    underlying.putByte(offset, (byte) '?');
-    int nextReadOffset = offset + fullLength;
-    if (nextReadOffset + BufferSlice.HEADER_OFFSET >= underlying.capacity()) {
-      underlying.putInt(offset + BufferSlice.FREE_MARK_FIELD_OFFSET, 0);
-    } else {
-
-      //      nextReadOffset(offset)
-
-      underlying.putInt(offset + BufferSlice.FREE_MARK_FIELD_OFFSET, nextReadOffset);
-    }
-
-    return new BufferSlice(this, offset, fullLength);
-  }
-
-  private BufferSlice slice(int offset, int fullLength, int oldNextReadOffset) {
-    underlying.putByte(offset, (byte) '?');
-    int nextReadOffset = offset + fullLength;
-
-    if (oldNextReadOffset >= nextReadOffset) {
-      if (oldNextReadOffset - nextReadOffset >= BufferSlice.HEADER_OFFSET) {
-        underlying.putByte(nextReadOffset, (byte) 0);
-        underlying.putInt(nextReadOffset + BufferSlice.FREE_MARK_FIELD_OFFSET, oldNextReadOffset);
-        if (oldNextReadOffset < 0 || oldNextReadOffset >= underlying.capacity()) {
-          System.out.println(oldNextReadOffset);
-        }
-      } else {
-        nextReadOffset = oldNextReadOffset;
-      }
-    } else { // offset == oldNextReadOffset == 0
-      if (nextReadOffset + BufferSlice.HEADER_OFFSET >= underlying.capacity()) {
-        nextReadOffset = 0;
-      } else {
-        underlying.putByte(nextReadOffset, (byte) 0);
-        underlying.putInt(
-            nextReadOffset + BufferSlice.FREE_MARK_FIELD_OFFSET,
-            underlying.capacity() - nextReadOffset);
-
-        if (underlying.capacity() - nextReadOffset < 0
-            || underlying.capacity() - nextReadOffset >= underlying.capacity()) {
-          System.out.println(underlying.capacity() - nextReadOffset);
-        }
-      }
-    }
-
-    underlying.putInt(offset + BufferSlice.FREE_MARK_FIELD_OFFSET, nextReadOffset);
-    if (nextReadOffset < 0 || nextReadOffset >= underlying.capacity()) {
-      System.out.println(nextReadOffset);
-    }
-
-    return new BufferSlice(this, offset, fullLength);
-  }
-
-  private void reset() {
-    this.writeIndex = 0;
-    this.readIndex = 0;
-    underlying.putByte(writeIndex, (byte) 0);
-    underlying.putInt(writeIndex + BufferSlice.FREE_MARK_FIELD_OFFSET, 0);
-  }
-
   void release(int offset) {
-    underlying.putByteVolatile(offset, (byte) 0);
+    underlying.putByteVolatile(offset, RELEASED);
     if (DEBUG) {
       System.err.println(
-          debugString("release") + ", offset=" + offset + ", nextOffset=" + nextReadOffset(offset));
+          debugString("release")
+              + "| r, offset="
+              + offset
+              + ", nextOffset="
+              + nextReadOffset(offset));
     }
   }
 
   void putBytes(int index, byte[] src) {
     underlying.putBytes(index, src);
     if (DEBUG) {
-      System.err.println(debugString("write") + ", index=" + index + ", length=" + src.length);
+      System.err.println(debugString("write") + "| w, index=" + index + ", length=" + src.length);
     }
   }
 
@@ -317,7 +208,7 @@ public class BufferSlab {
       char element = (char) bytes[i];
       if ((element >= 'a' && element <= 'z')
           || (element >= 'A' && element <= 'Z')
-          || element == '?') {
+          || element == OCCUPIED) {
         continue;
       }
       bytes[i] = '_';
@@ -327,9 +218,11 @@ public class BufferSlab {
         + operation.charAt(0)
         + "/"
         + new String(bytes)
+        + ", w0="
+        + w0
         + ", r="
-        + readIndex
+        + r
         + ", w="
-        + writeIndex;
+        + w;
   }
 }

@@ -17,9 +17,9 @@ package com.github.segabriel.buffer;
  */
 public class BufferSlice {
 
-  public static final int FREE_MARK_FIELD_OFFSET = Byte.BYTES;
-  public static final int NEXT_READ_FIELD_OFFSET = Integer.BYTES;
-  public static final int HEADER_OFFSET = FREE_MARK_FIELD_OFFSET + NEXT_READ_FIELD_OFFSET;
+  static final int FREE_MARK_FIELD_OFFSET = Byte.BYTES;
+  static final int NEXT_READ_FIELD_OFFSET = Integer.BYTES;
+  static final int HEADER_OFFSET = FREE_MARK_FIELD_OFFSET + NEXT_READ_FIELD_OFFSET;
 
   private final BufferSlab slab;
   private final int offset;

@@ -1,5 +1,6 @@
 package com.github.segabriel.buffer;
 
+import static com.github.segabriel.buffer.BufferSlice.HEADER_OFFSET;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 import java.nio.charset.StandardCharsets;
@@ -25,7 +26,7 @@ class PoolTest {
     BufferPool pool = new BufferPool(100);
 
     Flux.range(0, 1000000)
-        .delayElements(Duration.ofMillis(10), Schedulers.single())
+        .delayElements(Duration.ofMillis(2), Schedulers.single())
         .flatMap(
             i -> {
               int size = 3 + random.nextInt(10);
@@ -40,7 +41,10 @@ class PoolTest {
                         assertArrayEquals(
                             msg,
                             actual,
-                            "slice: offset=" + slice.offset() + ", length=" + slice.capacity());
+                            "slice: offset="
+                                + (slice.offset() - HEADER_OFFSET)
+                                + ", nextOffset="
+                                + (slice.offset() + slice.capacity()));
                         slice.release();
                       });
             },

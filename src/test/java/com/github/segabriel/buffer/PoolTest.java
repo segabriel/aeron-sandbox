@@ -7,7 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Random;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.RepeatedTest;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -15,17 +15,17 @@ import reactor.core.scheduler.Schedulers;
 class PoolTest {
 
   static {
-    System.setProperty("buffer.slice.debug", "true");
+    System.setProperty("buffer.slice.debug", "false");
   }
 
   private Random random = new Random();
 
-  @Test
+  @RepeatedTest(10)
   void test() {
 
     BufferPool pool = new BufferPool(100);
 
-    Flux.range(0, 1000000)
+    Flux.range(0, Integer.MAX_VALUE)
         .delayElements(Duration.ofMillis(2), Schedulers.single())
         .flatMap(
             i -> {
@@ -33,7 +33,7 @@ class PoolTest {
               byte[] msg = randomArray(size);
               BufferSlice slice = pool.allocate(msg.length).putBytes(0, msg);
 
-              return Mono.delay(Duration.ofMillis(50), Schedulers.parallel())
+              return Mono.delay(Duration.ofMillis(10), Schedulers.parallel())
                   .doOnSuccess(
                       $ -> {
                         byte[] actual = new byte[msg.length];
@@ -50,6 +50,7 @@ class PoolTest {
             },
             Integer.MAX_VALUE)
         .doOnError(Throwable::printStackTrace)
+        .take(Duration.ofSeconds(10))
         .blockLast();
   }
 

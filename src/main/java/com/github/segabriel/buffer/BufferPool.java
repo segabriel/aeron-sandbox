@@ -27,8 +27,6 @@ public class BufferPool {
     }
     BufferSlab slab = new BufferSlab(new UnsafeBuffer(ByteBuffer.allocateDirect(slabCapacity)));
     slabs.add(slab);
-
-    System.err.println(" created new slab,  " + slabs.size());
     return slab.allocate(size);
   }
 }

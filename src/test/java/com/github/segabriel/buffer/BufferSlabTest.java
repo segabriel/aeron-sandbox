@@ -10,6 +10,7 @@ import java.util.Random;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class BufferSlabTest {
@@ -309,7 +310,6 @@ class BufferSlabTest {
     underlying = new UnsafeBuffer(ByteBuffer.allocate(100));
     slab = new BufferSlab(underlying);
 
-
     byte[] msg1Bytes = randomArray(33 - 5);
     byte[] msg2Bytes = randomArray(33 - 5);
     byte[] msg3Bytes = randomArray(33 - 5);
@@ -361,9 +361,82 @@ class BufferSlabTest {
 
     byte[] msg10Bytes = randomArray(13 - 5);
 
-
     BufferSlice slice10 = slab.allocate(msg10Bytes.length).putBytes(0, msg10Bytes);
+  }
 
+  @Test
+  void test6() {
+    underlying = new UnsafeBuffer(ByteBuffer.allocate(5 + 1024 + 5 + 1024));
+    slab = new BufferSlab(underlying);
+
+    byte[] msg1 = randomArray(1024);
+    byte[] msg2 = randomArray(1024);
+    byte[] msg3 = randomArray(1024);
+
+    BufferSlice slice1 = slab.allocate(msg1.length).putBytes(0, msg1);
+    BufferSlice slice2 = slab.allocate(msg2.length).putBytes(0, msg2);
+
+    assertArrayEquals(msg1, getUnderlyingBytes(slice1.offset(), slice1.capacity()));
+    assertArrayEquals(msg2, getUnderlyingBytes(slice2.offset(), slice2.capacity()));
+
+    slice1.release();
+
+    BufferSlice slice3 = slab.allocate(msg3.length).putBytes(0, msg3);
+
+    assertArrayEquals(msg2, getUnderlyingBytes(slice2.offset(), slice2.capacity()));
+    assertArrayEquals(msg3, getUnderlyingBytes(slice3.offset(), slice3.capacity()));
+  }
+
+  @Test
+  @Disabled // it doesn't support behavior - slice1 blocks all, we move only from left to right.
+  void test7() {
+    int msgSize = 40;
+    underlying =
+        new UnsafeBuffer(ByteBuffer.allocate(HEADER_OFFSET + msgSize + HEADER_OFFSET + msgSize));
+    slab = new BufferSlab(underlying);
+
+    byte[] msg1 = randomArray(msgSize);
+    BufferSlice slice1 = slab.allocate(msg1.length).putBytes(0, msg1);
+
+    assertArrayEquals(msg1, getUnderlyingBytes(slice1.offset(), slice1.capacity()));
+
+    for (int i = 0; i < 10; i++) {
+      byte[] msg2 = randomArray(msgSize);
+      BufferSlice slice2 = slab.allocate(msg2.length).putBytes(0, msg2);
+
+      assertArrayEquals(msg1, getUnderlyingBytes(slice1.offset(), slice1.capacity()));
+      assertArrayEquals(msg2, getUnderlyingBytes(slice2.offset(), slice2.capacity()));
+
+      slice2.release();
+    }
+  }
+
+  @Test
+  void test8() {
+    int msgSize = 40;
+    underlying =
+        new UnsafeBuffer(ByteBuffer.allocate(HEADER_OFFSET + msgSize + HEADER_OFFSET + msgSize));
+    slab = new BufferSlab(underlying);
+
+    byte[] msg1 = randomArray(msgSize);
+    byte[] msg2 = randomArray(msgSize);
+    BufferSlice slice1 = slab.allocate(msg1.length).putBytes(0, msg1);
+    BufferSlice slice2 = slab.allocate(msg2.length).putBytes(0, msg2);
+
+    assertArrayEquals(msg1, getUnderlyingBytes(slice1.offset(), slice1.capacity()));
+    assertArrayEquals(msg2, getUnderlyingBytes(slice2.offset(), slice2.capacity()));
+
+    slice1.release();
+
+    for (int i = 0; i < 10; i++) {
+      byte[] msg3 = randomArray(msgSize);
+      BufferSlice slice3 = slab.allocate(msg3.length).putBytes(0, msg3);
+
+      assertArrayEquals(msg2, getUnderlyingBytes(slice2.offset(), slice2.capacity()));
+      assertArrayEquals(msg3, getUnderlyingBytes(slice3.offset(), slice3.capacity()));
+
+      slice3.release();
+    }
   }
 
   private byte[] getUnderlyingBytes(int offset, int length) {

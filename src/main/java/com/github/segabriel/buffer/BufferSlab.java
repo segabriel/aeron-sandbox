@@ -151,6 +151,21 @@ public class BufferSlab {
         }
       }
 
+      // try to revise that all slices before w0 are already released and we can reset w0 easily
+      int r0 = R0;
+      while (isReleased(r0)) {
+        r0 = nextReadOffset(r0);
+        if (r0 == w0) {
+          availableBytes = r0;
+          if (availableBytes >= fullLength) {
+            this.w0 = fullLength;
+            return slice(0, fullLength);
+          }
+          this.w0 = this.w;
+          return null;
+        }
+      }
+
       return null;
     }
   }

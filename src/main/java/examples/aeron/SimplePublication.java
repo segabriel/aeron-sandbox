@@ -1,5 +1,6 @@
 package examples.aeron;
 
+import examples.Utils;
 import io.aeron.Aeron;
 import io.aeron.ChannelUriStringBuilder;
 import io.aeron.CommonContext;
@@ -12,7 +13,6 @@ import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.agrona.IoUtil;
 import org.agrona.MutableDirectBuffer;
@@ -48,13 +48,7 @@ public class SimplePublication {
   public static void main(String[] args) {
     // setup environment
 
-    String aeronDirName =
-        IoUtil.tmpDirName()
-            + "aeron"
-            + '-'
-            + System.getProperty("user.name", "default")
-            + '-'
-            + UUID.randomUUID().toString();
+    String aeronDirName = Utils.tmpFileName("aeron");
 
     MediaDriver.Context mediaContext =
         new MediaDriver.Context()

@@ -42,6 +42,11 @@
       <artifactId>aeron-client</artifactId>
       <version>${aeron.version}</version>
     </dependency>
+    <dependency>
+      <groupId>io.aeron</groupId>
+      <artifactId>aeron-archive</artifactId>
+      <version>${aeron.version}</version>
+    </dependency>
 
     <!-- Reactor Core -->
     <dependency>

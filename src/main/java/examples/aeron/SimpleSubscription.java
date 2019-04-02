@@ -1,6 +1,5 @@
 package examples.aeron;
 
-import com.github.segabriel.aeron.raw.AeronResources;
 import io.aeron.Aeron;
 import io.aeron.ChannelUriStringBuilder;
 import io.aeron.Image;
@@ -27,7 +26,7 @@ import reactor.core.scheduler.Schedulers;
 
 public class SimpleSubscription {
 
-  private static final Logger logger = LoggerFactory.getLogger(AeronResources.class);
+  private static final Logger logger = LoggerFactory.getLogger(SimpleSubscription.class);
 
   private static final String address = "localhost";
   private static final int port = 13000;

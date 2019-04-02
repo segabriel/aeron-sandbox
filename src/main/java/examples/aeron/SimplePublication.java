@@ -1,6 +1,5 @@
 package examples.aeron;
 
-import com.github.segabriel.aeron.raw.AeronResources;
 import io.aeron.Aeron;
 import io.aeron.ChannelUriStringBuilder;
 import io.aeron.CommonContext;
@@ -24,7 +23,7 @@ import reactor.core.publisher.Flux;
 
 public class SimplePublication {
 
-  private static final Logger logger = LoggerFactory.getLogger(AeronResources.class);
+  private static final Logger logger = LoggerFactory.getLogger(SimplePublication.class);
 
   private static final String address = "localhost";
   private static final int port = 13000;

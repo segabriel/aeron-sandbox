@@ -53,9 +53,9 @@ public class SimplePublication {
     MediaDriver.Context mediaContext =
         new MediaDriver.Context()
             .aeronDirectoryName(aeronDirName)
-            .mtuLength(Configuration.MTU_LENGTH)
+            .mtuLength(Configuration.mtuLength())
             .imageLivenessTimeoutNs(
-                Duration.ofNanos(Configuration.IMAGE_LIVENESS_TIMEOUT_NS).toNanos())
+                Duration.ofNanos(Configuration.imageLivenessTimeoutNs()).toNanos())
             .dirDeleteOnStart(true);
 
     MediaDriver mediaDriver = MediaDriver.launchEmbedded(mediaContext);

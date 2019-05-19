@@ -54,9 +54,9 @@ public class AeronResources implements AutoCloseable {
       MediaDriver.Context mediaContext =
           new MediaDriver.Context()
               .aeronDirectoryName(generateRandomTmpDirName())
-              .mtuLength(Configuration.MTU_LENGTH)
+              .mtuLength(Configuration.mtuLength())
               .imageLivenessTimeoutNs(
-                  Duration.ofNanos(Configuration.IMAGE_LIVENESS_TIMEOUT_NS).toNanos())
+                  Duration.ofNanos(Configuration.imageLivenessTimeoutNs()).toNanos())
               .dirDeleteOnStart(true);
 
       mediaDriver = MediaDriver.launchEmbedded(mediaContext);

@@ -1,4 +1,4 @@
-package com.github.segabriel.aeron.eventloop;
+package com.github.segabriel.agent;
 
 import io.aeron.Image;
 import io.aeron.ImageFragmentAssembler;
@@ -19,7 +19,7 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Operators;
 
-final class ReactorImageAgent implements Agent {
+public final class ReactorImageAgent implements Agent {
 
   private static final Logger logger = LoggerFactory.getLogger(ReactorImageAgent.class);
 

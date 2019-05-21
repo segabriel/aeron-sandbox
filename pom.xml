@@ -51,6 +51,16 @@
       <artifactId>aeron-archive</artifactId>
       <version>${aeron.version}</version>
     </dependency>
+    <dependency>
+      <groupId>io.aeron</groupId>
+      <artifactId>aeron-cluster</artifactId>
+      <version>${aeron.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.aeron</groupId>
+      <artifactId>aeron-agent</artifactId>
+      <version>${aeron.version}</version>
+    </dependency>
 
     <!-- Reactor Core -->
     <dependency>
@@ -153,6 +163,18 @@
       <artifactId>junit-jupiter-api</artifactId>
       <version>5.3.2</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>net.bytebuddy</groupId>
+      <artifactId>byte-buddy-agent</artifactId>
+      <version>1.9.10</version>
+<!--      <scope>compile</scope>-->
+    </dependency>
+    <dependency>
+      <groupId>net.bytebuddy</groupId>
+      <artifactId>byte-buddy</artifactId>
+      <version>1.9.10</version>
+      <!--      <scope>compile</scope>-->
     </dependency>
   </dependencies>
 

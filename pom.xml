@@ -10,7 +10,7 @@
   <packaging>pom</packaging>
 
   <properties>
-    <aeron.version>1.18.0</aeron.version>
+    <aeron.version>1.19.1</aeron.version>
     <reactor.version>Californium-SR8</reactor.version>
 
     <slf4j.version>1.7.7</slf4j.version>
@@ -49,6 +49,16 @@
     <dependency>
       <groupId>io.aeron</groupId>
       <artifactId>aeron-archive</artifactId>
+      <version>${aeron.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.aeron</groupId>
+      <artifactId>aeron-cluster</artifactId>
+      <version>${aeron.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.aeron</groupId>
+      <artifactId>aeron-agent</artifactId>
       <version>${aeron.version}</version>
     </dependency>
 

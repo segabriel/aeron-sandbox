@@ -2,6 +2,7 @@ package com.github.segabriel.cluster;
 
 import io.aeron.archive.Archive;
 import io.aeron.archive.Archive.Configuration;
+import io.aeron.archive.ArchiveThreadingMode;
 import io.aeron.archive.client.AeronArchive;
 import io.aeron.cluster.ClusteredMediaDriver;
 import io.aeron.cluster.ConsensusModule;
@@ -44,6 +45,7 @@ public class ClusterNodeRunner {
             .aeronDirectoryName(aeronDirectoryName)
             .errorHandler(ex -> logger.error("Exception occurred Archive[{}]: ", instanceId, ex))
             .maxCatalogEntries(Configuration.maxCatalogEntries())
+            .threadingMode(ArchiveThreadingMode.SHARED)
             .archiveDir(new File(nodeDirName, "archive-" + instanceId));
 
     final AeronArchive.Context aeronArchiveCtx =

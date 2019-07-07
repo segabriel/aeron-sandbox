@@ -7,11 +7,13 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Random;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.RepeatedTest;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+@Disabled
 class PoolTest {
 
   static {

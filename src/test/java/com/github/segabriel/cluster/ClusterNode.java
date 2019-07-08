@@ -82,13 +82,17 @@ public class ClusterNode implements AutoCloseable {
     IoUtil.delete(new File(instanceDirName), true);
   }
 
-  private class Contexts {
+  public Contexts contexts() {
+    return contexts;
+  }
 
-    private final MediaDriver.Context mediaDriverCtx;
-    private final Archive.Context archiveCtx;
-    private final AeronArchive.Context aeronArchiveCtx;
-    private final ConsensusModule.Context consensusModuleCtx;
-    private final ClusteredServiceContainer.Context clusteredServiceContainerCtx;
+  public class Contexts {
+
+    public final MediaDriver.Context mediaDriverCtx;
+    public final Archive.Context archiveCtx;
+    public final AeronArchive.Context aeronArchiveCtx;
+    public final ConsensusModule.Context consensusModuleCtx;
+    public final ClusteredServiceContainer.Context clusteredServiceContainerCtx;
 
     private Contexts() {
 
